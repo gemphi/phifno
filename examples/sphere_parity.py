@@ -1,6 +1,6 @@
-"""Parity of phinet::sphere::real_harmonic against scipy.special.sph_harm_y (scipy >= 1.15).
+"""Parity of phifno::sphere::real_harmonic against scipy.special.sph_harm_y (scipy >= 1.15).
 
-Run:  cargo run --release --example sphere_dump > sphere.tsv && python3 examples/sphere_parity.py sphere.tsv
+Run:  cargo run --release -p phifno --example dump > sphere.tsv && python3 examples/sphere_parity.py sphere.tsv
 Real harmonics from the complex ones (Condon–Shortley phase removed):
   m = 0 : Y_l^0
   m > 0 : sqrt2 * (-1)^m * Re Y_l^m

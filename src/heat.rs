@@ -1,8 +1,11 @@
 //! Laplace–Beltrami heat flow: diffusion on the circle, exact in Fourier
-//! modes, and band-limited on the sphere. Used to smooth a persona's
+//! modes, and on the sphere, exact in spherical harmonics and band-limited
+//! to the [`crate::sphere`] basis' eight degrees. Used to smooth a persona's
 //! distribution over sectors before comparing it, and to define "nearby"
 //! by overlap after diffusion.
 
+use crate::sphere::{degree_of, Sphere};
+use phistd::c64;
 use std::f64::consts::TAU;
 
 /// Heat flow of a real function sampled at `n` equally spaced points on the
@@ -39,6 +42,29 @@ pub fn circle(f: &[f64], t: f64) -> Vec<f64> {
     out
 }
 
+/// Heat flow on the sphere, on harmonic coefficients: `Y_l^m` is an
+/// eigenfunction of the Laplace–Beltrami operator with eigenvalue
+/// `−l(l+1)`, so coefficient `k` (degree `l`) decays by `exp(−l(l+1) t)`.
+/// Exact. Degree 0 — the mean — never moves.
+pub fn sphere_coeffs(coeffs: &[c64], t: f64) -> Vec<c64> {
+    coeffs
+        .iter()
+        .enumerate()
+        .map(|(k, c)| {
+            let l = degree_of(k) as f64;
+            c * (-l * (l + 1.0) * t).exp()
+        })
+        .collect()
+}
+
+/// Heat flow on the sphere, on values at `grid`'s points: analysed into the
+/// band-limited basis, decayed degree by degree, synthesised back. Exact
+/// for band-limited values; anything above the basis' top degree is
+/// dropped by the analysis.
+pub fn sphere(grid: &Sphere, values: &[c64], t: f64) -> Vec<c64> {
+    grid.synthesis(&sphere_coeffs(&grid.analysis(values), t))
+}
+
 /// Overlap of two non-negative distributions after diffusing both for `t`:
 /// the Bhattacharyya coefficient `Σ √(p_i q_i)`, in [0, 1].
 pub fn overlap_after(p: &[f64], q: &[f64], t: f64) -> f64 {
@@ -66,6 +92,26 @@ mod tests {
         assert!(h[10] < 1.0 && h[11] > 0.0 && h[9] > 0.0, "mass spreads to the neighbours");
         let flat = circle(&f, 100.0);
         assert!(flat.iter().all(|v| (v - 1.0 / 64.0).abs() < 1e-6), "long times flatten");
+    }
+
+    #[test]
+    fn heat_on_the_sphere_decays_each_degree_and_keeps_the_mean() {
+        use crate::sphere::HARMONICS;
+        let coeffs: Vec<c64> = (0..HARMONICS).map(|k| c64::new(1.0 + k as f64 * 0.1, 0.0)).collect();
+        let t = 0.03;
+        let hot = sphere_coeffs(&coeffs, t);
+        for (k, (a, b)) in hot.iter().zip(&coeffs).enumerate() {
+            let l = degree_of(k) as f64;
+            assert!((a - b * (-l * (l + 1.0) * t).exp()).norm() < 1e-12, "coefficient {k}");
+        }
+        assert_eq!(hot[0], coeffs[0], "the mean does not move");
+        let grid = Sphere::minimal();
+        let values = grid.synthesis(&coeffs);
+        let same = sphere(&grid, &values, 0.0);
+        assert!(same.iter().zip(&values).all(|(a, b)| (a - b).norm() < 1e-9), "t = 0 is the identity on band-limited values");
+        let flat = sphere(&grid, &values, 100.0);
+        let mean = grid.synthesis(&crate::sphere::degree_gate(&coeffs, 0));
+        assert!(flat.iter().zip(&mean).all(|(a, b)| (a - b).norm() < 1e-9), "long times leave only the mean");
     }
 
     #[test]

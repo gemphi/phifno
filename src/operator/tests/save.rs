@@ -10,8 +10,9 @@ use phistd::{unit_random, Function};
         (0..n).map(|i| unit_random(space, i as u64 + 1)).collect()
     }
 
-    /// The operator must learn a fixed relation the identity cannot express:
-    /// a circular shift by one sample, which is exactly a spectral
+    /// The fixed relation the identity cannot express: every input shifted
+    /// circularly by `by` samples, which a spectral filter can (a phase ramp).
+    /// Returns the inputs, their targets, one example per input, and the pool.
     fn shift_task(space: usize, n: usize, by: usize) -> (Vec<Function>, Vec<Function>, Vec<Example>, Vec<usize>) {
         let inputs = table(n, space);
         let targets: Vec<Function> = inputs.iter().map(|f| { let mut g = f.clone(); g.rotate_right(by); g }).collect();

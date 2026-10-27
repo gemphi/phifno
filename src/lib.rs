@@ -21,7 +21,8 @@
 //! epochs, pool 1,228): **12.8× chance validation / 13.1× test with 1,192
 //! parameters**, against the circle operator's 14.7× / 14.6× with 8,360 —
 //! seven times fewer parameters for 88% of the ranking, in 89 s against 142.
-//! On the synthetic degree-filter task (`examples/filter.rs`) the sphere tie
+//! On the synthetic degree-filter task (phical's `filter` example, and
+//! `degree_filter_task` in `operator/tests/sphere.rs`) the sphere tie
 //! beats the circle outright, because the relation *is* per degree. And the
 //! **anisotropic tie** (`Tie::Anisotropic`, one weight per `(l, |m|)`, 36
 //! slots, 4,776 parameters) beats the circle on Austen itself: 16.0× / 15.6×

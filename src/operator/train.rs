@@ -6,16 +6,6 @@ use phistd::{Adam, MixtureTerms};
 use phistd::{mix64, Function};
 
 impl Fno {
-    /// Draws a decoy index from `pool` that is not `target`.
-    pub fn decoy(pool: &[usize], target: usize, mut r: u64) -> usize {
-        let mut d = pool[(r % pool.len() as u64) as usize];
-        while d == target && pool.len() > 1 {
-            r = mix64(r);
-            d = pool[(r % pool.len() as u64) as usize];
-        }
-        d
-    }
-
     /// One epoch of hinge training. `table[i]` is the function of item `i`;
     /// decoys are drawn uniformly from `pool`. Returns the mean loss.
     pub fn train_epoch(
@@ -27,7 +17,7 @@ impl Fno {
         adam: &mut Adam,
         seed: u64,
     ) -> f64 {
-        let sampler = |target: usize, r: u64| Self::decoy(pool, target, r);
+        let sampler = |target: usize, r: u64| phistd::decoy(pool, target, r);
         self.train_epoch_with(table, examples, &sampler, batch, adam, seed)
     }
 
@@ -134,6 +124,11 @@ impl Fno {
         total / batches.max(1) as f64
     }
 
+    /// One epoch of softmax training: each example's output is scored by
+    /// cosine against every row of `table` (`cosine_table`) and pulled toward
+    /// its target row by `cross_entropy` at inverse temperature `beta`; Adam
+    /// steps after each batch of `batch`, in an order shuffled by `seed`.
+    /// Returns the mean loss per batch, whose exponential is the
     /// operator's perplexity over the table.
     pub fn train_epoch_softmax(
         &mut self,

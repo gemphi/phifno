@@ -65,7 +65,7 @@ impl Fno {
 
     /// [`Fno::to_bytes`] with the parameters stored as `f32` pairs (format
     /// version 3): half the size, about seven significant digits, the
-    /// computation stays `f64` after loading. `examples/bench.rs` reports the
+    /// computation stays `f64` after loading. `tests/save.rs` bounds the
     /// drift a round trip causes on `apply`.
     pub fn to_bytes_compact(&self) -> Vec<u8> {
         let saved = SavedCompact {

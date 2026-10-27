@@ -102,3 +102,32 @@ fn anisotropic_groups_count_thirty_six() {
     let fno = Fno::new(cfg, 1);
     assert_eq!(fno.tape.value(fno.layers[0].r).shape, [4, 4, 36]);
 }
+
+#[test]
+fn at_resolution_on_the_sphere_keeps_the_shared_degrees() {
+    // Groups are numbered degree first, so the groups two resolutions share
+    // carry over, the new ones start at zero, and `space` is a perfect
+    // square (36 is not a power of two).
+    for (cfg, at64, at16) in [(FnoConfig::sphere(), 8, 4), (FnoConfig::anisotropic(), 36, 10)] {
+        let fno = Fno::new(cfg, 3);
+        let mut small = fno.at_resolution(16);
+        assert_eq!((small.config.space, small.config.modes), (16, 4));
+        let big_r = fno.tape.value(fno.params()[2]).clone();
+        let small_r = small.tape.value(small.params()[2]).clone();
+        assert_eq!((big_r.shape[2], small_r.shape[2]), (at64, at16), "{:?}", cfg.tie);
+        for g in 0..at16 {
+            assert_eq!(small_r.get(0, 1, g), big_r.get(0, 1, g), "group {g} carries over");
+        }
+        let back = small.at_resolution(64);
+        let back_r = back.tape.value(back.params()[2]);
+        for g in 0..at64 {
+            let want = match g < at16 {
+                true => big_r.get(0, 1, g),
+                false => c64::new(0.0, 0.0),
+            };
+            assert_eq!(back_r.get(0, 1, g), want, "group {g} on the way back");
+        }
+        assert_eq!(small.apply(&[unit_random(16, 5)])[0].len(), 16, "the moved operator runs");
+        assert_eq!(fno.at_resolution(36).config.modes, 6);
+    }
+}

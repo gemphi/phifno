@@ -29,6 +29,7 @@ mod fno;
 mod graph;
 mod modes;
 mod module;
+mod resolution;
 mod sampler;
 mod save;
 mod symmetry;

@@ -1,4 +1,4 @@
-//! The Fourier neural operator: construction, forward, apply, masks, resolution transfer.
+//! The Fourier neural operator: construction, forward, apply, masks (resolution transfer is resolution.rs).
 
 use super::{FnoConfig, Layer, Tie};
 use phistd::{Tape, Tensor, Var};
@@ -119,48 +119,6 @@ impl Fno {
             out.extend(unstack(self.tape.value(y)));
         }
         self.tape.truncate(self.keep);
-        out
-    }
-
-    /// The same operator at another resolution. `R` is stored per signed
-    /// frequency; the kept low frequencies exist at every power-of-two
-    /// `space`, so they are copied across and the rest stays zero. Lift,
-    /// pointwise weights, biases and projection do not depend on `space`.
-    /// The result is exactly what the FNO literature means by resolution
-    /// invariance, and `examples/resolution.rs` measures how far it holds.
-    pub fn at_resolution(&self, space: usize) -> Fno {
-        assert!(space.is_power_of_two(), "space must be a power of two");
-        let mut cfg = self.config;
-        cfg.space = space;
-        cfg.modes = cfg.modes.min(space / 2);
-        let mut out = Fno::new(cfg, 0);
-        let (old_s, wd) = (self.config.space, self.config.width);
-        let src = self.params();
-        let dst = out.params();
-        for (i, (sp, dp)) in src.iter().zip(&dst).enumerate() {
-            let sv = self.tape.value(*sp).clone();
-            let is_r = i >= 2 && (i - 2) % 3 == 0 && sv.shape[2] == old_s;
-            if !is_r {
-                out.tape.set_value(*dp, sv);
-                continue;
-            }
-            let mut r = Tensor::zeros([wd, wd, space]);
-            for a in 0..wd {
-                for b in 0..wd {
-                    for m in 0..space {
-                        // signed frequency of new mode m
-                        let f: i64 = if m <= space / 2 { m as i64 } else { m as i64 - space as i64 };
-                        if f.unsigned_abs() as usize > old_s / 2 {
-                            continue;
-                        }
-                        let om = if f >= 0 { f as usize } else { (old_s as i64 + f) as usize };
-                        r.set(a, b, m, sv.get(a, b, om));
-                    }
-                }
-            }
-            out.tape.set_value(*dp, r);
-        }
-        out.mask_modes();
         out
     }
 

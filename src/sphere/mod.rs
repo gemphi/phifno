@@ -3,7 +3,7 @@
 //!
 //! In Phient's world, a word (w) is a seed: what it relates to, under what
 //! conditions (c). Phical stores no point: a word is 64 relations, each a
-//! phasor on a closed circle with a count. Sixty-four is not a round number
+//! phasor on a closed circle. Sixty-four is not a round number
 //! by accident: the real spherical harmonics `Y_l^m` with `0 ≤ l < 8` and
 //! `−l ≤ m ≤ l` number `Σ(2l+1) = 8² = 64`. So the same 64 channels that are
 //! a Fourier series on the circle are also a function on the sphere,
